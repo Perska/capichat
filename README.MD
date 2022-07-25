@@ -4,6 +4,10 @@ really bad "everything in one place" frontend for contentapi (qcs)
 
 it's really bad
 
+WARNING: THERE IS AN EVENT LIMIT IN CONTENTAPI. YOU CAN'T RECEIVE INFINITE EVENTS IN ONE GO. IF THE AMOUNT OF EVENTS EXCEEDS 1000 (i think), ANY EXTRAS WILL GET DROPPED. (It's been a while, so this may have changed since.)
+
+Why does that matter? Well, this frontend is very lazy right now and will try and fetch every message sent since the server restart with a hacky method. The event limit may be easily exceeded over time. Some day, I'll make this not suck? Maybe?
+
 ## usage
 
 1. login with your username and password (email not yet supported)
