@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html data-loggedin="null">
+<head>
+<style>
+body {
+	font-family: sans-serif;
+}
+
+.text img, .text video {
+	border: 1px black solid;
+	display: block;
+	width: auto;
+	max-width: 100%;
+	max-height: 10em;
+}
+
+.avatar {
+	display: inline;
+	width: 1em;
+	height: 1em;
+	border: 1px black solid;
+	vertical-align: middle;
+	margin-right: 0.25em;
+}
+
+#thing {
+	display: flex;
+	flex-direction: row;
+	height: 55em;
+	resize: both;
+	width: 100%;
+	overflow: hidden;
+}
+
+#thing * {
+	box-sizing: border-box;
+}
+
+#box * {
+	box-sizing: content-box;
+}
+
+#box {
+	border: 1px black solid;
+	width: 100%;
+	overflow: hidden scroll;
+	white-space: pre-wrap;
+	flex-grow: 1;
+}
+
+#textbox {
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 5em;
+	min-height: 5em;
+	display: block;
+	resize: none;
+	border: 1px black solid;
+	font-family: sans-serif;
+}
+
+#chatpane {
+	width: 0;
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+}
+
+#sidebar {
+	width: 18em;
+	min-width: 18em;
+	display: flex;
+	flex-direction: column
+}
+
+#users {
+	border: 1px black solid;
+	width: 100%;
+	overflow-x: hidden;
+	white-space: pre-wrap;
+	flex-grow: 1;
+}
+
+#me {
+	border: 1px black solid;
+	height: 5em;
+	min-height: 5em;
+	display: none;
+}
+
+html[data-loggedin="true"] #me {
+	display: flex;
+}
+
+#me-avatar {
+	width: auto;
+	height: calc(100% - 0.5em);
+	display: block;
+	margin: 0.25em;
+	border: 2px black outset;
+}
+
+#me-username {
+	word-break: break-word;
+}
+
+#login {
+	border: 1px black solid;
+	height: 5em;
+	min-height: 5em;
+	display: none;
+}
+
+html[data-loggedin="false"] #login {
+	display: block;
+}
+
+blockquote {
+	border: 3px black double;
+	padding: 0.25em;
+}
+
+.youtube a {
+	display: block;
+	width: 320px;
+	height: 180px;
+	text-decoration: none;
+	border: 1px black solid;
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-color: black;
+}
+
+.youtube .pre {
+	font-weight: bold;
+	color: white;
+	text-shadow: black -1px 0px, black 1px 0px, black 0px -1px, black 0px 1px;
+}
+
+.playingYoutube .pre {
+	display: none;
+}
+
+.youtube button {
+	display: none;
+}
+
+.playingYoutube button {
+	display: inline-block !important;
+}
+
+.playingYoutube iframe {
+	display: block;
+	width: 320px;
+	height: 180px;
+	border: 1px black solid;
+}
+
+summary {
+	border: 3px gray double;
+	padding: 0.125em 0.25em;
+	margin: 0.125em;
+}
+
+details {
+	border: 1px gray solid;
+	padding: 0.125em;
+}
+
+summary::before {
+	content: "Show ";
+}
+
+details[open] > summary::before {
+	content: "Hide ";
+}
+
+.message {
+	margin: 0.25em;
+}
+
+.text {
+	margin: 0.125em;
+}
+
+.module {
+	font-family: monospace;
+}
+
+.manageContainer > input[type="button"] {
+	font-size: 60%;
+	padding: 0;
+	margin: 0 0.25em;
+}
+
+.remove {
+	display: none;
+}
+
+.manageContainer {
+	display: none;
+}
+
+.message:hover .manageContainer, .message:focus .manageContainer {
+	display: inline;
+}
+
+[data-deleting="maybe"] .remove {
+	display: inline;
+}
+
+.error {
+	text-align: center;
+	border: 3px black double;
+	border-radius: 8px;
+	margin: 0.25em;
+	padding: 0.5em;
+}
+
+.error button {
+	margin: 0.5em auto 0 auto;
+}
+
+.timestamp {
+	float: right;
+	font-size: 60%;
+}
+</style>
+<link rel="stylesheet" href="markup.css">
+<script src="parse.js"></script>
+<script src="render.js"></script>
+<script src="legacy.js"></script>
+
+<script src="markup2-patch.js"></script>
+
+<script src="capi.js"></script>
+</head>
+<body>
+<div id="thing">
+	<div id="chatpane">
+		<div id="box"></div>
+		<textarea id="textbox"></textarea>
+	</div>
+	<div id="sidebar">
+		<div id="users"></div>
+		<div id="me">
+			<img id="me-avatar" src="" width="100" height="100">
+			<ul style="margin: .25em 0;list-style: none;padding: 0;">
+				<li><span id="me-username">???</span></li>
+				<li><input type="button" value="Logout" onclick="logout()"></li>
+			</ul>
+		</div>
+		
+		<form id="login">
+			<input placeholder="Username" name="user"><br>
+			<input placeholder="Password" name="pass" type="password"><br>
+			<button>Login</button
+		</form>
+	</div>
+</div>
+<input id="room" type="number" value="0">
+<input id="avatar" type="text" value="">
+<input id="nickname" type="text" value="" maxlength="50">
+<input id="edit" type="number" value="0">
+<script>
+
+Markup.css_class = "text"
+
+box = document.getElementById("box")
+userlist = document.getElementById("users")
+textbox = document.getElementById("textbox")
+roompicker = document.getElementById("room")
+avatar = document.getElementById("avatar")
+nickname = document.getElementById("nickname")
+edit = document.getElementById("edit")
+login = document.getElementById("login")
+myself = document.getElementById("me")
+meAvatar = document.getElementById("me-avatar")
+meUsername = document.getElementById("me-username")
+
+textbox.onkeypress = function(e) {
+	if (!loggedIn()) return
+	if (!e.shiftKey && e.keyCode == 13) { // enter
+		e.preventDefault()
+		if (textbox.value == "") return
+		var message = new CommentBuilder(textbox.value,Number(roompicker.value),"12y",avatar.value != "" ? avatar.value : undefined, nickname.value != "" ? nickname.value : undefined)
+		message.id = Number(edit.value)
+		capi.WriteType(APICONST.WRITETYPES.MESSAGE,message,new ApiHandler(
+			(e) => console.log("Message success:",e),
+			{0: (e) => (errorMsg("Message failure: " + e.message + "\n(" + e.status_code + ")"),console.error("Message failure:",e))},
+			false));
+		//send(textbox.value)
+		edit.value = 0
+		textbox.value = ""
+		return
+	}
+}
+
+function newMsg(str) {
+	var elem = document.createElement("div")
+	elem.appendChild(document.createTextNode(str))
+	box.appendChild(elem) //str+"\n"
+	return elem
+}
+
+function errorMsg(str) {
+	var doScroll = false
+	if ((box.scrollTop-box.scrollTopMax)>-300) doScroll = true
+	
+	var elem = document.createElement("div")
+	elem.className = "error"
+	elem.appendChild(document.createTextNode(str))
+	
+	var dismiss = document.createElement("button")
+	dismiss.style.display = "block";
+	dismiss.innerHTML = "Dismiss"
+	dismiss.onclick = function() {
+		this.parentElement.remove()
+	}
+	
+	elem.appendChild(dismiss)
+	box.appendChild(elem) //str+"\n"
+	
+	if (doScroll) box.scrollTo(0,box.scrollTopMax)
+	return elem
+}
+
+function CleanNickname(nickname) {
+	if(typeof nickname == "string")
+		return nickname.substr(0,50).replace(/\n/g, "  ");
+	else
+		return nickname;
+}
+
+function editComment() {
+	var msg = this.parentElement.parentElement.parentElement.things.msg
+	edit.value = msg.id
+	textbox.value = msg.text
+	room.value = msg.contentId
+	avatar.value = msg.values.a ? msg.values.a : ""
+	nickname.value = msg.values.n ? msg.values.n : ""
+}
+
+function maybeDeleteComment() {
+	this.parentElement.dataset.deleting = "maybe"
+}
+
+function dontDeleteComment() {
+	this.parentElement.dataset.deleting = "nevermind"
+}
+
+function reallyDeleteComment() {
+	var msg = this.parentElement.parentElement.parentElement.things.msg
+	capi.DeleteType(APICONST.WRITETYPES.MESSAGE,msg.id,(e) => console.log("Message status:",e))
+}
+
+function quickNav() {
+	room.value = this.parentElement.parentElement.dataset.contentid
+}
+
+function sbsMsg(msg,sentby,roomname,data) {
+	var elem = document.createElement("div")
+	var sender = document.createElement("span")
+	sender.className = "sender"
+	
+	var user = document.createElement("span")
+	var room = document.createElement("span")
+	var text = document.createElement("div")
+	
+	user.textContent = sentby.username
+	user.className = "user"
+	room.textContent = roomname + " (" + msg.contentId + ")"
+	room.className = "room"
+	room.onclick = quickNav
+	
+	if (!msg.module) {
+		Markup.convert_lang(msg.text, msg.values.m, text)
+		//text.appendChild(Parse.parseLang(msg.text, msg.values.m ? msg.values.m : "plaintext"))
+		//text.appendChild(Parse.parseLang(msg.text, msg.values.m ? msg.values.m : "plaintext"))
+		//text.className = "text"
+	}
+	else 
+	{
+		text.appendChild(document.createTextNode(msg.text))
+		text.className = "module"
+	}
+	
+	elem.className = "message"
+	elem.tabIndex = -1
+	
+	var nickname = CleanNickname(
+		(typeof msg.values.b == "string") ? msg.values.b : (typeof msg.values.n == "string") ? msg.values.n : undefined);
+	//var nick = document.createElement("span")
+	
+	elem.dataset.id = msg.id
+	elem.dataset.contentid = msg.contentId
+	elem.dataset.mergehash = `${sentby.username} + ${nickname} + ${msg.contentId} + ${msg.values.a}`
+	
+	var nick
+	
+	if (msg.module) {
+		sender.appendChild(document.createTextNode("(" + msg.module + ") "))
+	}
+	
+	var avatar = document.createElement("img")
+	avatar.src = capi.url + "file/raw/" + (msg.values.a ? msg.values.a : sentby.avatar) + "?size=100&crop=true"
+	avatar.className = "avatar"
+	sender.appendChild(avatar)
+	
+	if (nickname != undefined){
+		nick = document.createElement("span")
+		nick.textContent = nickname
+		nick.className = "nick"
+		sender.appendChild(nick)
+		sender.appendChild(document.createTextNode(" ("))
+		sender.appendChild(user)
+		sender.appendChild(document.createTextNode(")"))
+	} else {
+		sender.appendChild(user)
+	}
+	
+	sender.appendChild(document.createTextNode(" in "))
+	sender.appendChild(room)
+	sender.appendChild(document.createTextNode(":"))
+	
+	var manage = document.createElement("span")
+	manage.className = "manageContainer"
+	
+	var edit   = document.createElement("input")
+	edit.onclick = editComment
+	edit.type = "button"
+	edit.value = "EDIT"
+	var remove = document.createElement("input")
+	remove.onclick = maybeDeleteComment
+	remove.type = "button"
+	remove.value = "DELETE"
+	
+	var nodel  = document.createElement("input")
+	nodel.onclick = dontDeleteComment
+	nodel.type = "button"
+	nodel.value = "DON'T DELETE"
+	var yesdel = document.createElement("input")
+	yesdel.onclick = reallyDeleteComment
+	yesdel.type = "button"
+	yesdel.value = "REALLY DELETE"
+	
+	nodel.className = "remove"
+	yesdel.className = "remove"
+	
+	manage.appendChild(edit)
+	manage.appendChild(remove)
+	manage.appendChild(nodel)
+	manage.appendChild(yesdel)
+	
+	sender.appendChild(manage)
+	elem.appendChild(sender)
+	
+	var timestamp = document.createElement("span")
+	timestamp.className = "timestamp"
+	var createDate = document.createTextNode(new Date(msg.createDate).toLocaleString())
+	timestamp.appendChild(createDate)
+	if (msg.edited){
+		timestamp.appendChild(document.createTextNode(" [ED: "))
+		var editDate = document.createTextNode(new Date(msg.editDate).toLocaleString())
+		timestamp.appendChild(editDate)
+		timestamp.appendChild(document.createTextNode("]"))
+	}
+	
+	elem.appendChild(timestamp)
+	
+	elem.appendChild(text)
+	
+	elem.things = {user: user, room: user, text: text, data: data, msg: msg, nick: nick}
+	
+	// Don't add the comment here! Let the frontend do it. Might be cleaner, idk.
+	// Also, ... something.
+	//box.appendChild(elem) //str+"\n"
+	return elem
+}
+
+/*var message = /^(?::([a-zA-Z0-9_\.@!]+) )?([\w\d]+) (.*)$/
+var username = /^[A-Za-z0-9_]+/*/
+
+window.onbeforeunload = function(){return true;}
+
+login.addEventListener("submit", attemptLogin)
+
+saveKey = (name) => `capichat-${useTestAPI ? "test" : "main"}-${name}`
+
+function saveData(name, data) {
+	localStorage[saveKey(name)] = data
+}
+
+function loadData(name) {
+	return localStorage[saveKey(name)]
+}
+
+function eraseData(name) {
+	delete localStorage[saveKey(name)]
+}
+
+useTestAPI = window.location.search.indexOf("useTestAPI") != -1
+
+listenToRooms = useTestAPI ? [384,0] : [937,0]
+
+roompicker.value = listenToRooms[0]
+edit.value = 0
+
+messages = {}
+users = {}
+activeusers = {}
+
+authkey = loadData("authkey")
+tokenGet = () => authkey
+
+apiUrl = useTestAPI ? "https://oboy.smilebasicsource.com/api/" : "https://qcs.shsbs.xyz/api/"
+
+capi = new Api(apiUrl, tokenGet)
+
+capi.default_handler = new ApiHandler(
+        d => {
+            console.warn("No default success handler set for api!");
+            console.log("Data from API default: ", d);
+        },
+        e => {
+            console.warn("No default error handler set for api! See console for error");
+            console.log("Error from API default: ", e);
+        },
+        d => {
+            console.debug(`api[${d.id}]: '${d.request.responseURL}' ${d.request.status} - ${d.request.responseText.length} bytes`);
+        }
+    )
+
+function decodeComment(content) {
+	var newline = content.indexOf("\n")
+	try {
+		// try to parse the first line as JSON
+		var data = JSON.parse(newline>=0 ? content.substr(0, newline) : content)
+	} finally {
+		if (data && data.constructor == Object) { // new or legacy format
+			if (newline >= 0)
+				data.t = content.substr(newline+1) // new format
+		} else // raw
+			data = {t: String(content)}
+		return data
+	}
+}
+
+autoConfig = {
+	liveHandler: function(e) {
+		console.log("Raw data (liveHandler):",e.data)
+		var data = e.data
+		//sockConfig.actions.lastId = data.lastId
+		if (data.objects != undefined && data.objects.message_event != undefined) {
+			capi.AutoLinkUsers(data.objects.message_event.message, data.objects.message_event.user)
+			capi.AutoLinkModuleUsers(data.objects.message_event.message, data.objects.message_event.user)
+			// Sort the messages, because they might not be in order. It'll save time later.
+			data.objects.message_event.message.sort((a, b)=>{
+				return a.createDate>b.createDate
+			})
+			for (var i=0;i<data.objects.message_event.message.length;i++) {
+				var comment = data.objects.message_event.message[i]
+				if (!listenToRooms.includes(comment.contentId) && !listenToRooms.includes(0)) continue
+				if (!comment.deleted) {
+					var doScroll = false
+					var user = data.objects.message_event.user.find((user) => user.id == comment.createUserId)
+					var room = data.objects.message_event.content.find((room) => room.id == comment.contentId)
+					if ((box.scrollTop-box.scrollTopMax)>-100) doScroll = true
+					var message = sbsMsg(comment, user, room.name, data)
+					if (messages[comment.id]) {
+						messages[comment.id].replaceWith(message)
+					}
+					else {
+						// Todo: add arbitrary insertion. Right now it just appends to end.
+						box.appendChild(message)
+					}
+					messages[comment.id] = message
+					if (doScroll) box.scrollTo(0,box.scrollTopMax)
+				} else if (messages[comment.id] != undefined) {
+					box.removeChild(messages[comment.id])
+					delete messages[comment.id]
+				}
+			}
+		}
+		
+	},
+	userlistUpdateHandler: function(e) {
+		for (var user in e.data.objects.user) {
+			users[e.data.objects.user[user].id] = e.data.objects.user[user]
+		}
+		for (var room in e.data.statuses) {
+			activeusers[room] = e.data.statuses[room]
+		}
+		var active = {}
+		for (var room in activeusers) {
+			for (var user in activeusers[room]) {
+				active[user] = users[user]
+			}
+		}
+		userlist.textContent = ""
+		var listofusers = document.createElement("ul")
+		for (var user in active) {
+			var item = document.createElement("li")
+			item.textContent = active[user].username
+			listofusers.appendChild(item)
+		}
+		userlist.appendChild(listofusers)
+	},
+	errorEventListener: function(m,r,nws,close) {
+		errorMsg(`Websock error! Error: ${m}, closing: ${close}, check console for response.`)
+		console.warn("Websock error! Error: ",m,", closing: ",close,", response: ",r)
+		if (nws != null) sock = nws
+		if (close && r.type == "unexpected" && r.error.includes("LastSeen checkpoint too high!")) {
+			setTimeout(function(){ sock = capi.AutoWebsocket(autoConfig,fauxWS(-1)) }, 1000)
+		}
+		//console.warn("Websock error response:", r)
+	}
+}
+
+function fauxWS(id){
+	return {pendingRequests: {}, pendingSends: [], currentReconnects: 0, liveUpdatesId: id}
+}
+
+logged = null
+
+var sock
+if (authkey) {
+	initChat()
+}
+else {
+	errorMsg("You are not logged in.")
+	loginStatus(false)
+}
+
+loginExpireTime = 60 * 24 * 30
+
+function attemptLogin(e) {
+	e.preventDefault()
+	var auth = new LoginParameter(login.user.value, login.pass.value, undefined, loginExpireTime)
+	capi.Login(auth, {
+		success: e => (errorMsg("Login success!"), saveData("authkey", authkey = e.result), initChat()),
+		error: e => (errorMsg(`Logging in failed:\n${e.message}`))
+	})
+}
+
+function logout() {
+	sock.close()
+	eraseData("authkey")
+	authkey = undefined;
+	loginStatus(false)
+}
+
+function initChat() {
+	if (loggedIn()) return
+	capi.UserSelf({ 
+		success: e => (whoAmI(e.result), sock = capi.AutoWebsocket(autoConfig, fauxWS(-1)), loginStatus(true), login.user.value = login.pass.value = ""),
+		error: e => (errorMsg("Your token has expired, or is otherwise invalid. Please login again."), eraseData("authkey"), loginStatus(false))
+	})
+}
+
+function loginStatus(status) {
+	logged = status
+	document.documentElement.setAttribute("data-loggedin", status)
+}
+
+function loggedIn() {
+	if (!authkey) return false
+	return logged
+}
+
+function whoAmI(theanswers) {
+	meUsername.textContent = theanswers.username
+	meAvatar.src = `${apiUrl}file/raw/${avatar.value = theanswers.avatar}?size=100&crop=true`
+}
+</script>
+</body>
+</html>

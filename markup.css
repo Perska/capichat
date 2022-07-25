@@ -1,0 +1,45 @@
+/* ruby text doesn't work if set to white-space: pre */
+.text rt {
+	white-space: pre-line;
+}
+
+/*** invalid tag ***/
+.text .invalid {
+	background: #F888;
+}
+
+/*** keyboard key ***/
+.text kbd {
+	display: inline-block;
+	border: 1px solid gray;
+	border-radius: 3px;
+	padding-block: 0.2rem;
+	padding-inline: 0.4rem;
+	font-family: monospace;
+}
+
+/***********/
+/** Table **/
+/***********/
+.text table, .text td, .text th {
+	border: 1px solid currentColor;
+	border-collapse: collapse;
+}
+.text td, .text th {
+	padding-block: 0.2em;
+	padding-inline: 0.3em;
+}
+
+/**********************/
+/** Background Color **/
+/**********************/
+.text [data-bgcolor="red"]    { background: var(--bgred, #F888); }
+.text [data-bgcolor="orange"]  { background: var(--bggreen, #FA08); }
+.text [data-bgcolor="yellow"] { background: var(--bgyellow, #FF08); }
+.text [data-bgcolor="green"] { background: var(--bgorange, #0F08); }
+.text [data-bgcolor="blue"]   { background: var(--bgblue, #08F8); }
+.text [data-bgcolor="purple"] { background: var(--bgpurple, #C0F8); }
+.text [data-bgcolor="gray"]   { background: var(--bggray, #AAA8); }
+.text table { background: var(--bg); } /* reset */
+
+
