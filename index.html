@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html data-loggedin="null">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>capichat</title>
 <style>
 body {
 	font-family: sans-serif;
@@ -26,9 +28,11 @@ body {
 #thing {
 	display: flex;
 	flex-direction: row;
-	height: 55em;
-	resize: both;
 	width: 100%;
+	height: 85vh;
+	max-width: 100%;
+	max-height: 85vh;
+	resize: both;
 	overflow: hidden;
 }
 
@@ -68,10 +72,14 @@ body {
 }
 
 #sidebar {
-	width: 18em;
-	min-width: 18em;
+	width: 15em;
+	min-width: 15em;
 	display: flex;
 	flex-direction: column
+}
+
+#sidebar[data-hidden="true"] {
+	display: none;
 }
 
 #users {
@@ -263,7 +271,8 @@ details[open] > summary::before {
 <input id="room" type="number" value="0">
 <input id="avatar" type="text" value="">
 <input id="nickname" type="text" value="" maxlength="50">
-<input id="edit" type="number" value="0">
+<input id="edit" type="number" value="0"><br>
+<label><input id="sidetoggle" type="checkbox" checked="true">Show Sidebar?</label>
 <script>
 
 Markup.css_class = "text"
@@ -279,6 +288,10 @@ login = document.getElementById("login")
 myself = document.getElementById("me")
 meAvatar = document.getElementById("me-avatar")
 meUsername = document.getElementById("me-username")
+sidebar = document.getElementById("sidebar")
+sidetoggle = document.getElementById("sidetoggle")
+sidetoggle.checked = true
+sidetoggle.onchange = () => sidebar.setAttribute("data-hidden", !sidetoggle.checked)
 
 textbox.onkeypress = function(e) {
 	if (!loggedIn()) return
@@ -634,7 +647,7 @@ else {
 	loginStatus(false)
 }
 
-loginExpireTime = 60 * 24 * 30
+loginExpireTime = 60 * 60 * 24 * 30
 
 function attemptLogin(e) {
 	e.preventDefault()
